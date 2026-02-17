@@ -13,6 +13,11 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/albums", albumsRoutes);
 
+// Root route
+app.get("/", (req, res) => {
+  res.send("Albums API is running ✅ Use /api/albums");
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   console.log("✅ /api/health was hit");
