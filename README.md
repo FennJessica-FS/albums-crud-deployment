@@ -1,9 +1,7 @@
-# Albums CRUD Deployment (MERN)
+## Deployed Application
 
-Monorepo:
-- client/ (React)
-- server/ (Express + MongoDB)
+Frontend (Netlify):
+https://comforting-creponne-a90b1b.netlify.app
 
-Deployed:
-- API: (add Render URL)
-- Client: (add Vercel URL)
+API (Render):
+https://albums-api-pgx9.onrender.com
