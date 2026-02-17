@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import "./App.css";
 
+const API_BASE = "https://albums-api-pgx9.onrender.com";
+
 function LandingPage() {
   return (
     <div className="landing">
@@ -24,10 +26,10 @@ function AlbumsPage() {
 
   const fetchAlbums = async () => {
     try {
-      const res = await fetch("/api/albums");
+      const res = await fetch(`${API_BASE}/api/albums`);
       const data = await res.json();
       setAlbums(data);
-    } catch {
+    } catch (err) {
       setError("Failed to fetch albums");
     }
   };
@@ -38,7 +40,11 @@ function AlbumsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const url = editingId ? `/api/albums/${editingId}` : "/api/albums";
+
+    const url = editingId
+      ? `${API_BASE}/api/albums/${editingId}`
+      : `${API_BASE}/api/albums`;
+
     const method = editingId ? "PUT" : "POST";
 
     await fetch(url, {
@@ -55,7 +61,7 @@ function AlbumsPage() {
   };
 
   const handleDelete = async (id) => {
-    await fetch(`/api/albums/${id}`, { method: "DELETE" });
+    await fetch(`${API_BASE}/api/albums/${id}`, { method: "DELETE" });
     fetchAlbums();
   };
 
@@ -69,6 +75,8 @@ function AlbumsPage() {
   return (
     <div className="page">
       <h2>Albums</h2>
+
+      {error && <p>{error}</p>}
 
       <form onSubmit={handleSubmit} className="form">
         <input
@@ -120,13 +128,8 @@ function AboutPage() {
       <h2>About</h2>
       <p>
         Album Archive is a MERN stack application built to manage and organize
-        music albums. Music has always been a big part of my life, so I chose a
-        topic that feels personal while demonstrating full Create, Read, Update,
-        and Delete functionality using MongoDB, Express, React, and Node.
-      </p>
-      <p>
-        This project showcases API integration, routing, state management, and
-        deployment practices in a real world full stack application.
+        music albums. This project demonstrates full Create, Read, Update, and
+        Delete functionality using MongoDB, Express, React, and Node.
       </p>
     </div>
   );
@@ -146,9 +149,7 @@ function App() {
 
         <div className="theme-buttons">
           <button onClick={() => setTheme("dark")}>🌙 Dark mode</button>
-
           <button onClick={() => setTheme("light")}>☀️ Light mode</button>
-
           <button onClick={() => setTheme("neon")}>💜 Neon mode</button>
         </div>
       </nav>
