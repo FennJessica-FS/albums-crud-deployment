@@ -2,7 +2,10 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+
 import albumsRoutes from "./routes/albums.js";
+import authRoutes from "./routes/auth.js";
+import authMiddleware from "./middleware/auth.js";
 
 dotenv.config();
 
@@ -11,7 +14,12 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use("/api/albums", albumsRoutes);
+
+// Public routes
+app.use("/api/auth", authRoutes);
+
+// Protected routes
+app.use("/api/albums", authMiddleware, albumsRoutes);
 
 // Root route
 app.get("/", (req, res) => {
@@ -20,11 +28,10 @@ app.get("/", (req, res) => {
 
 // Health check
 app.get("/api/health", (req, res) => {
-  console.log("✅ /api/health was hit");
   res.status(200).json({ status: "ok" });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5050;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 mongoose
