@@ -1,14 +1,13 @@
 import { ALBUMS_URL } from "../config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// helper so errors actually show up
 async function handleRes(res) {
   const text = await res.text();
   let data = null;
+
   try {
     data = text ? JSON.parse(text) : null;
-  } catch {
-    // not JSON, leave as text
-  }
+  } catch {}
 
   if (!res.ok) {
     const message =
@@ -21,36 +20,49 @@ async function handleRes(res) {
   return data;
 }
 
+async function authHeaders() {
+  const token = await AsyncStorage.getItem("token");
+  console.log("TOKEN FROM STORAGE:", token); // 👈 add this
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function getAlbums() {
-  const res = await fetch(ALBUMS_URL);
+  const headers = await authHeaders();
+  const res = await fetch(ALBUMS_URL, { headers });
   return handleRes(res);
 }
 
 export async function createAlbum(payload) {
+  const headers = await authHeaders();
   const res = await fetch(ALBUMS_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(payload),
   });
   return handleRes(res);
 }
 
 export async function updateAlbum(id, payload) {
+  const headers = await authHeaders();
   const res = await fetch(`${ALBUMS_URL}/${id}`, {
-    method: "PUT", // if your API uses PATCH, swap to PATCH
-    headers: { "Content-Type": "application/json" },
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(payload),
   });
   return handleRes(res);
 }
 
 export async function deleteAlbum(id) {
+  const headers = await authHeaders();
   const res = await fetch(`${ALBUMS_URL}/${id}`, {
     method: "DELETE",
+    headers,
   });
   return handleRes(res);
 }
+
 export async function getAlbumById(id) {
-  const res = await fetch(`${ALBUMS_URL}/${id}`);
+  const headers = await authHeaders();
+  const res = await fetch(`${ALBUMS_URL}/${id}`, { headers });
   return handleRes(res);
 }

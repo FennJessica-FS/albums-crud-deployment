@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -34,6 +35,17 @@ export default function AlbumForm() {
 
   const headerTitle = isEditing ? "Edit Album" : "Add Album";
   const primaryLabel = isEditing ? "Save Changes" : "Create";
+
+  // ✅ PROTECT SCREEN
+  useEffect(() => {
+    (async () => {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Login required", "Please login first.");
+        router.replace("/");
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +122,6 @@ export default function AlbumForm() {
         await createAlbum(payload);
       }
 
-      // List reload happens when you return (Index should refresh on focus)
       router.back();
     } catch (err) {
       console.log(err);
@@ -146,65 +157,49 @@ export default function AlbumForm() {
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="e.g. The Miseducation of Lauryn Hill"
+              placeholder="Album"
               placeholderTextColor="#6E7B8B"
               autoCapitalize="words"
               style={styles.input}
               editable={!saving}
-              returnKeyType="next"
             />
 
             <Text style={styles.label}>Artist</Text>
             <TextInput
               value={artist}
               onChangeText={setArtist}
-              placeholder="e.g. Lauryn Hill"
+              placeholder="Artist"
               placeholderTextColor="#6E7B8B"
               autoCapitalize="words"
               style={styles.input}
               editable={!saving}
-              returnKeyType="next"
             />
 
             <Text style={styles.label}>Year (optional)</Text>
             <TextInput
               value={year}
               onChangeText={(v) => setYear(normalizeYear(v))}
-              placeholder="e.g. 1998"
+              placeholder="1998"
               placeholderTextColor="#6E7B8B"
               keyboardType="number-pad"
               style={styles.input}
               editable={!saving}
-              returnKeyType="done"
             />
 
             <Pressable
               onPress={handleSubmit}
               disabled={saving}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                (pressed || saving) && styles.pressed,
-              ]}
+              style={styles.primaryBtn}
             >
-              {saving ? (
-                <View style={styles.btnRow}>
-                  <ActivityIndicator />
-                  <Text style={styles.primaryBtnText}>
-                    {isEditing ? "Saving…" : "Creating…"}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.primaryBtnText}>{primaryLabel}</Text>
-              )}
+              <Text style={styles.primaryBtnText}>
+                {saving ? "Saving…" : primaryLabel}
+              </Text>
             </Pressable>
 
             <Pressable
               onPress={() => router.back()}
               disabled={saving}
-              style={({ pressed }) => [
-                styles.ghostBtn,
-                pressed && styles.pressed,
-              ]}
+              style={styles.ghostBtn}
             >
               <Text style={styles.ghostBtnText}>Cancel</Text>
             </Pressable>
@@ -217,11 +212,9 @@ export default function AlbumForm() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, padding: 16, backgroundColor: "#0B0F14" },
-
   header: { marginBottom: 12 },
   h1: { fontSize: 28, fontWeight: "800", color: "#F3F5F7" },
   meta: { marginTop: 6, color: "#97A3B0" },
-
   card: {
     backgroundColor: "#121A24",
     borderRadius: 18,
@@ -230,7 +223,6 @@ const styles = StyleSheet.create({
     borderColor: "#1E2A3A",
     gap: 10,
   },
-
   label: { color: "#A7B3C2", fontWeight: "700", marginTop: 6 },
   input: {
     backgroundColor: "#0F1620",
@@ -241,7 +233,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: "#F3F5F7",
   },
-
   primaryBtn: {
     marginTop: 10,
     backgroundColor: "#7C5CFF",
@@ -250,7 +241,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryBtnText: { color: "white", fontWeight: "800" },
-
   ghostBtn: {
     backgroundColor: "transparent",
     paddingVertical: 12,
@@ -260,10 +250,6 @@ const styles = StyleSheet.create({
     borderColor: "#1E2A3A",
   },
   ghostBtnText: { color: "#A7B3C2", fontWeight: "800" },
-
-  btnRow: { flexDirection: "row", gap: 10, alignItems: "center" },
-  pressed: { opacity: 0.7 },
-
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   centerText: { color: "#97A3B0" },
 });

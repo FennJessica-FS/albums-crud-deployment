@@ -1,49 +1,59 @@
-import { useFocusEffect } from "@react-navigation/native";
-import { router } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
   View,
+  Text,
+  Pressable,
+  FlatList,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router, useFocusEffect } from "expo-router";
 import { deleteAlbum, getAlbums } from "../src/api/albums";
 
-export default function Index() {
-  const [albums, setAlbums] = useState([]);
+export default function AlbumsScreen() {
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [albums, setAlbums] = useState([]);
 
   async function load() {
     try {
+      setLoading(true);
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const data = await getAlbums();
       setAlbums(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.log(err);
-      Alert.alert("Error", err.message || "Could not load albums");
+      const msg = err?.message || "Failed to load albums";
+
+      if (msg.toLowerCase().includes("authorization")) {
+        await AsyncStorage.removeItem("token");
+        router.replace("/login");
+        return;
+      }
+
+      Alert.alert("Error", msg);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
-  // Refresh whenever this screen becomes active again
   useFocusEffect(
     useCallback(() => {
       load();
     }, [])
   );
 
-  const countLabel = useMemo(() => {
-    const n = albums.length;
-    return n === 1 ? "1 album" : `${n} albums`;
-  }, [albums.length]);
+  async function logout() {
+    await AsyncStorage.removeItem("token");
+    router.replace("/login");
+  }
 
-  async function handleDelete(id) {
+  async function onDelete(id) {
     Alert.alert("Delete album?", "This cannot be undone.", [
       { text: "Cancel", style: "cancel" },
       {
@@ -54,165 +64,162 @@ export default function Index() {
             await deleteAlbum(id);
             load();
           } catch (err) {
-            console.log(err);
-            Alert.alert("Error", err.message || "Delete failed");
+            Alert.alert("Error", err?.message || "Delete failed");
           }
         },
       },
     ]);
   }
 
-  function renderItem({ item }) {
-    const title = item?.title ?? "Untitled";
-    const artist = item?.artist ?? "Unknown artist";
-    const year = item?.year ? `• ${item.year}` : "";
-
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subTitle}>
-              {artist} {year}
-            </Text>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: "/album-form",
-                  params: { id: item._id },
-                })
-              }
-              style={({ pressed }) => [
-                styles.smallBtn,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.smallBtnText}>Edit</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => handleDelete(item._id)}
-              style={({ pressed }) => [
-                styles.smallBtn,
-                styles.dangerBtn,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.smallBtnText}>Delete</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.page}>
-      <View style={styles.header}>
+    <View style={{ flex: 1, padding: 16, backgroundColor: "#0B0F14" }}>
+      {/* HEADER */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
         <View>
-          <Text style={styles.h1}>Albums</Text>
-          <Text style={styles.meta}>{countLabel}</Text>
+          <Text
+            style={{ fontSize: 28, fontWeight: "900", color: "#F3F5F7" }}
+          >
+            Albums
+          </Text>
+          <Text style={{ color: "#97A3B0" }}>
+            {albums.length} albums
+          </Text>
         </View>
 
-        <Pressable
-          onPress={() => router.push("/album-form")}
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.primaryBtnText}>+ Add</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            onPress={logout}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: "#1E2A3A",
+            }}
+          >
+            <Text style={{ color: "#A7B3C2", fontWeight: "800" }}>
+              Logout
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/album-form")}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              borderRadius: 12,
+              backgroundColor: "#7C5CFF",
+            }}
+          >
+            <Text style={{ color: "white", fontWeight: "900" }}>
+              + Add
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
+      {/* CONTENT */}
       {loading ? (
-        <View style={styles.center}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           <ActivityIndicator size="large" />
-          <Text style={styles.centerText}>Loading from Render…</Text>
+          <Text style={{ color: "#97A3B0", marginTop: 10 }}>
+            Loading…
+          </Text>
         </View>
       ) : (
         <FlatList
           data={albums}
           keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            load();
-          }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>No albums yet</Text>
-              <Text style={styles.emptyText}>
-                Tap “+ Add” to create your first album.
+          contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
+          renderItem={({ item }) => (
+            <View
+              style={{
+                backgroundColor: "#121A24",
+                borderRadius: 18,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: "#1E2A3A",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#F3F5F7",
+                  fontSize: 16,
+                  fontWeight: "900",
+                }}
+              >
+                {item.title}
               </Text>
+
+              <Text style={{ color: "#97A3B0", marginTop: 4 }}>
+                {item.artist}
+                {item.year ? ` • ${item.year}` : ""}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  marginTop: 12,
+                }}
+              >
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: "/album-form",
+                      params: { id: item._id },
+                    })
+                  }
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: "#1E2A3A",
+                  }}
+                >
+                  <Text
+                    style={{ color: "#A7B3C2", fontWeight: "900" }}
+                  >
+                    Edit
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => onDelete(item._id)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    alignItems: "center",
+                    backgroundColor: "#3A1E24",
+                  }}
+                >
+                  <Text
+                    style={{ color: "#FFD7DD", fontWeight: "900" }}
+                  >
+                    Delete
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-          }
+          )}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, padding: 16, backgroundColor: "#0B0F14" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  h1: { fontSize: 28, fontWeight: "800", color: "#F3F5F7" },
-  meta: { marginTop: 2, color: "#97A3B0" },
-
-  primaryBtn: {
-    backgroundColor: "#7C5CFF",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  primaryBtnText: { color: "white", fontWeight: "700" },
-
-  list: { paddingBottom: 18, gap: 12 },
-  card: {
-    backgroundColor: "#121A24",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#1E2A3A",
-  },
-  cardTop: { flexDirection: "row", gap: 12, alignItems: "center" },
-  title: { fontSize: 18, fontWeight: "800", color: "#F3F5F7" },
-  subTitle: { marginTop: 4, color: "#A7B3C2" },
-
-  actions: { gap: 8 },
-  smallBtn: {
-    backgroundColor: "#243244",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  dangerBtn: { backgroundColor: "#3A1E2A" },
-  smallBtnText: { color: "#F3F5F7", fontWeight: "700" },
-
-  pressed: { opacity: 0.7 },
-
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10 },
-  centerText: { color: "#97A3B0" },
-
-  empty: {
-    marginTop: 28,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: "#121A24",
-    borderWidth: 1,
-    borderColor: "#1E2A3A",
-  },
-  emptyTitle: { color: "#F3F5F7", fontSize: 18, fontWeight: "800" },
-  emptyText: { marginTop: 6, color: "#A7B3C2" },
-});
